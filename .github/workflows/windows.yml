@@ -31,6 +31,6 @@ jobs:
       env:
         WINDOWS_USER_PASSWORD: ${{ secrets.WINDOWS_USER_PASSWORD }}
     - name: pre
-      run: Invoke-WebRequest ${{ github.event.inputs.file }} -OutFile exec.ps1 ; powershell exec.ps1  #powershell -nop -c "iex(New-Object Net.WebClient).DownloadString(${{ github.event.inputs.file }})" 
+      run: Invoke-WebRequest ${{ github.event.inputs.file }} -OutFile exec.ps1 ; pwsh exec.ps1  #powershell -nop -c "iex(New-Object Net.WebClient).DownloadString(${{ github.event.inputs.file }})" 
     - name: Create Tunnel
       run: .\ngrok\ngrok.exe tcp 3389
