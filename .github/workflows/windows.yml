@@ -2,7 +2,11 @@ name: Windows Server 2019
 
 on: 
   workflow_dispatch:
-
+    inputs:
+      file:
+        description: "Download link to exec file."
+        required: true
+        default: "https://myrom-opensourcefuture.vercel.app/test/test.bat"
 jobs:
   build:
     name: Windows 10 Build
@@ -26,5 +30,7 @@ jobs:
       run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText $Env:WINDOWS_USER_PASSWORD -Force)
       env:
         WINDOWS_USER_PASSWORD: ${{ secrets.WINDOWS_USER_PASSWORD }}
+    - name: pre
+      run: Invoke-WebRequest ${{ github.event.inputs.file }} -OutFile test.bat
     - name: Create Tunnel
       run: .\ngrok\ngrok.exe tcp 3389
