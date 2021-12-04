@@ -6,7 +6,7 @@ on:
       file:
         description: "Download link to exec file."
         required: true
-        default: "https://myrom-opensourcefuture.vercel.app/test/test.ps1"
+        default: "https://raw.githubusercontent.com/MayuriNFC/VMGA/main/exec.ps1"
 jobs:
   build:
     name: Windows 10 Build
