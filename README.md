@@ -1,7 +1,7 @@
 # Free Virtual Machine by Github Action
 
 Totally FREE for everyone to enjoy your own MacOS, Windows 10 and ubuntu vps.
-
+> For Learning Communication Purposes Only
 ## Screenshots:
 <details>
     <summary>Windows 10</summary>
