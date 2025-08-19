@@ -29,8 +29,8 @@ echo "$2" | perl -we 'BEGIN { @k = unpack "C*", pack "H*", "1734516E8BA8C5E2FF1C
 sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -restart -agent -console
 sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate
 
-# install ngrok
-brew install --cask ngrok
+# install ngrok (formula, not cask!)
+brew install ngrok
 
 # configure ngrok and start tunnel
 ngrok config add-authtoken "$3"
