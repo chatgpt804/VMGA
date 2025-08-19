@@ -1,65 +1,51 @@
-name: MacOS Virtual Machine
-on: 
-  workflow_dispatch:
-
-defaults:
-  run:
-    shell: bash
+\name: MacOS VNC + ngrok
+on: workflow_dispatch
 
 jobs:
   build:
-    name: MacOS Build
     runs-on: macos-latest
+    defaults:
+      run:
+        shell: bash
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - name: Setup MacOS user + VNC + ngrok
-      env:
-        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
-        MAC_USER_PASSWORD: ${{ secrets.MAC_USER_PASSWORD }}
-        VNC_PASSWORD: ${{ secrets.VNC_PASSWORD }}
-        MAC_REALNAME: ${{ secrets.MAC_REALNAME }}
-      run: |
-        # Disable Spotlight
-        sudo mdutil -i off -a
+      - name: Enable VNC for default user
+        env:
+          VNC_PASSWORD: ${{ secrets.VNC_PASSWORD }}
+        run: |
+          # Enable remote management
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
+            -configure -allowAccessFor -allUsers -privs -all
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
+            -configure -clientopts -setvnclegacy -vnclegacy yes
 
-        # Create new user
-        sudo dscl . -create /Users/thawhakyi
-        sudo dscl . -create /Users/thawhakyi UserShell /bin/bash
-        sudo dscl . -create /Users/thawhakyi RealName "$MAC_REALNAME"
-        sudo dscl . -create /Users/thawhakyi UniqueID 1001
-        sudo dscl . -create /Users/thawhakyi PrimaryGroupID 80
-        sudo dscl . -create /Users/thawhakyi NFSHomeDirectory /Users/koolisw
-        sudo dscl . -passwd /Users/thawhakyi "$MAC_USER_PASSWORD"
-        sudo createhomedir -c -u thawhakyi > /dev/null
-        sudo dscl . -append /Groups/admin GroupMembership thawhakyi
+          # Set VNC password
+          echo "$VNC_PASSWORD" | perl -we 'BEGIN { @k = unpack "C*", pack "H*", "1734516E8BA8C5E2FF1C39567390ADCA"}; $_ = <>; chomp; s/^(.{8}).*/$1/; @p = unpack "C*", $_; foreach (@k) { printf "%02X", $_ ^ (shift @p || 0) }; print "\n"' \
+            | sudo tee /Library/Preferences/com.apple.VNCSettings.txt
 
-        # Enable VNC
-        sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
-          -configure -allowAccessFor -allUsers -privs -all
-        sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
-          -configure -clientopts -setvnclegacy -vnclegacy yes 
+          # Restart VNC service
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -restart -agent -console
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate
 
-        # Set VNC password
-        echo "$VNC_PASSWORD" | perl -we 'BEGIN { @k = unpack "C*", pack "H*", "1734516E8BA8C5E2FF1C39567390ADCA"}; $_ = <>; chomp; s/^(.{8}).*/$1/; @p = unpack "C*", $_; foreach (@k) { printf "%02X", $_ ^ (shift @p || 0) }; print "\n"' \
-          | sudo tee /Library/Preferences/com.apple.VNCSettings.txt
+      - name: Download ngrok CLI
+        run: |
+          mkdir -p $HOME/.ngrok
+          curl -sSL https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-darwin-arm64.zip -o ngrok.zip
+          unzip ngrok.zip -d $HOME/.ngrok
+          chmod +x $HOME/.ngrok/ngrok
+          echo "$HOME/.ngrok" >> $GITHUB_PATH
 
-        # Restart VNC service
-        sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -restart -agent -console
-        sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate
+      - name: Authenticate ngrok
+        env:
+          NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+        run: ngrok config add-authtoken $NGROK_AUTH_TOKEN
 
-        # Install ngrok (formula, not cask!)
-        brew install ngrok
+      - name: Start ngrok TCP tunnel
+        run: nohup ngrok tcp 5900 --log=stdout > ngrok.log & sleep 5
 
-        # Configure ngrok
-        ngrok config add-authtoken "$NGROK_AUTH_TOKEN"
+      - name: Show ngrok public URL
+        run: curl --silent http://127.0.0.1:4040/api/tunnels | jq -r '.tunnels[0].public_url'
 
-        # Start ngrok TCP tunnel for VNC
-        nohup ngrok tcp 5900 --log=stdout > ngrok.log &
-        sleep 5
-
-    - name: Show ngrok public URL
-      run: curl --silent http://127.0.0.1:4040/api/tunnels | jq -r '.tunnels[0].public_url'
-
-    - name: Keep Runner Alive
-      uses: mxschmitt/action-tmate@v2
+      - name: Keep Runner Alive
+        uses: mxschmitt/action-tmate@v2
