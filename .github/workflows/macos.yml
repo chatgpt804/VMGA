@@ -1,4 +1,4 @@
-\name: MacOS VNC + ngrok
+name: MacOS VNC + ngrok
 on: workflow_dispatch
 
 jobs:
